@@ -19,7 +19,6 @@ This widget acts as a central hub, allowing you to monitor and manage your appli
 - Automatic IP blocking based on request rate
 - Configurable request thresholds
 - Protection against DDoS and brute-force attacks
-- Real-time monitoring
 - Works together with [IP Blocker](https://octobercms.com/plugin/wobqqq-fortifyipblocker) for manual protection
 
 ## 🔗 Related Plugins
