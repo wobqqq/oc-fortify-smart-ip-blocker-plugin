@@ -11,6 +11,7 @@ use Illuminate\Contracts\Config\Repository;
 use October\Rain\Database\Model;
 use October\Rain\Events\EventServiceProvider;
 use October\Rain\Extension\Container as ExtensionContainer;
+use October\Rain\Validation\ValidationServiceProvider;
 use Orchestra\Testbench\TestCase as BaseTestCase;
 use ReflectionProperty;
 use System\Classes\PluginManager;
@@ -70,7 +71,7 @@ abstract class TestCase extends BaseTestCase
      */
     protected function getPackageProviders($app): array
     {
-        return [EventServiceProvider::class];
+        return [EventServiceProvider::class, ValidationServiceProvider::class];
     }
 
     /**

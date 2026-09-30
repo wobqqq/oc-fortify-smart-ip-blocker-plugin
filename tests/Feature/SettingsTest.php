@@ -86,6 +86,23 @@ it('validates the limits, the addresses and the headers', function (string $fiel
     ['ip_firewall.smart_ip_blocker_excluded_headers', [['header' => "X-Bad\r\nHeader", 'value' => 'x']], false],
 ]);
 
+it('names the address in the lock-out message', function (): void {
+    $model = smartIpBlockerSettings('198.51.100.20');
+    (new ReflectionProperty(app(), 'isRunningInConsole'))->setValue(app(), false);
+
+    $validator = Validator::make([
+        'config' => ['password_policy_min_length' => 12, 'session_lifetime' => 30],
+        'ip_firewall' => [
+            'smart_ip_blocker_view' => 'wobqqq.fortify::denied',
+            'smart_ip_blocker_requests_limit' => 100,
+            'smart_ip_blocker_ban_hours' => 1,
+            'smart_ip_blocker_excluded_ips' => [['ip' => '203.0.113.1']],
+        ],
+    ], $model->rules);
+
+    expect($validator->errors()->first('ip_firewall.smart_ip_blocker_excluded_ips'))->toContain('198.51.100.20');
+});
+
 it('shows on the dashboard whether it is on', function (): void {
     $item = CoreTransformer::widgetGroupItemDto('placeholder');
     Event::dispatch(FortifyEvent::SERVICES_WIDGET_GROUP_ITEM_SMART_IP_BLOCKER->value, [&$item]);
