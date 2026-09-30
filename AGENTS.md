@@ -4,7 +4,7 @@ Guidance for AI coding agents (Claude Code, Codex, Junie, Cursor) working in thi
 
 ## What this is
 
-**Smart IP Blocker** (`Wobqqq.FortifySmartIpBlocker`) is a paid module of the Fortify security suite for October CMS 3.x/4.x (built and tested against 4.4 on Laravel 12, PHP 8.2+). It counts the requests of every IP per minute and bans an IP that exceeds the limit for a number of hours, on the site and in the backend, answering 429 with `Retry-After` and the page the administrator chose.
+**Smart IP Blocker** (`Wobqqq.FortifySmartIpBlocker`) is a free module of the Fortify security suite for October CMS 3.x/4.x (built and tested against 4.4 on Laravel 12, PHP 8.2+). It counts the requests of every IP per minute and bans an IP that exceeds the limit for a number of hours, on the site and in the backend, answering 429 with `Retry-After` and the page the administrator chose.
 
 It requires the core plugin [`Wobqqq.Fortify`](https://github.com/wobqqq/oc-fortify-plugin): the settings live in the core's `Wobqqq\Fortify\Models\Fortify` record under the `ip_firewall.smart_ip_blocker_*` key and appear on **Settings → Fortify**, and the module draws its own item on the core's dashboard widget.
 

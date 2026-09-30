@@ -1,7 +1,7 @@
 {
     "name": "wobqqq/fortifysmartipblocker-plugin",
     "description": "Fortify module for October CMS: blocks the IP addresses that exceed a request rate",
-    "license": "proprietary",
+    "license": "MIT",
     "type": "october-plugin",
     "keywords": [
         "october",
