@@ -7,44 +7,44 @@ namespace Wobqqq\FortifySmartIpBlocker\Http\Middlewares;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\View as IlluminateView;
+use Symfony\Component\HttpFoundation\Response;
 use Wobqqq\Fortify\Enums\View;
 use Wobqqq\FortifySmartIpBlocker\Instances\SmartIpBlockerDtoInstance;
 use Wobqqq\FortifySmartIpBlocker\Services\SmartIpBlockerService;
 
-final class SmartIpBlockerMiddleware
+final readonly class SmartIpBlockerMiddleware
 {
     public const ALIAS = 'fortify_smart_ip_blocker';
 
-    public function __construct(private readonly SmartIpBlockerService $smartIpBlockerService)
+    public function __construct(private SmartIpBlockerService $smartIpBlockerService)
     {
     }
 
     /**
-     * @param Request $request
-     * @param Closure $next
-     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory|\Illuminate\Http\Response|mixed
+     * @param Closure(Request): mixed $next
      */
-    public function handle(Request $request, Closure $next)
+    public function handle(Request $request, Closure $next): mixed
     {
-        $ip = $request->ip();
+        $ip = (string)$request->ip();
 
-        /** @var null|array<string, string|array<int, string>> $headers */
+        /** @var array<string, array<int, string|null>> $headers */
         $headers = $request->headers->all();
-        $headers = empty($headers) ? [] : $headers;
 
-        if ($this->smartIpBlockerService->check((string)$ip, $headers)) {
+        if ($this->smartIpBlockerService->check($ip, $headers)) {
             return $next($request);
         }
 
-        $smartFortifyIpBlockerDto = SmartIpBlockerDtoInstance::instance()->get();
+        $smartIpBlockerDto = SmartIpBlockerDtoInstance::instance()->get();
 
-        $view = IlluminateView::exists($smartFortifyIpBlockerDto->view)
-            ? $smartFortifyIpBlockerDto->view
+        $view = IlluminateView::exists($smartIpBlockerDto->view)
+            ? $smartIpBlockerDto->view
             : View::DENIED->value;
 
         /** @var \Illuminate\Routing\ResponseFactory $response */
         $response = response();
 
-        return $response->view($view, [], 403);
+        return $response->view($view, [], Response::HTTP_TOO_MANY_REQUESTS, [
+            'Retry-After' => (string)max(1, $this->smartIpBlockerService->retryAfter($ip)),
+        ]);
     }
 }

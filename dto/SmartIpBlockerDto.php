@@ -7,17 +7,17 @@ namespace Wobqqq\FortifySmartIpBlocker\Dto;
 final readonly class SmartIpBlockerDto
 {
     public function __construct(
-        public bool   $enabled,
+        public bool $enabled,
         public string $view,
         public bool $cacheControl,
         public int $requestsLimit,
         public int $banHours,
         /** @var array<int, string> $excludedCidrRanges */
-        public array  $excludedCidrRanges = [],
+        public array $excludedCidrRanges = [],
         /** @var array<string, int> $excludedExactIps */
-        public array  $excludedExactIps = [],
-        /** @var array<string, string> $excludedHeaders */
-        public array  $excludedHeaders = [],
+        public array $excludedExactIps = [],
+        /** @var array<string, array<int, string>|string> $excludedHeaders lower-case header => the values that exclude it */
+        public array $excludedHeaders = [],
     ) {
     }
 }

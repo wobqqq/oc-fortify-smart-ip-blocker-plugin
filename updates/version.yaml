@@ -2,3 +2,5 @@ v1.0.1:
     - 'First version'
 v1.0.2:
     - 'Changes in events'
+v1.0.3:
+    - 'The request limit is counted per minute, a banned visitor gets 429 with Retry-After, excluded headers match a part of the value, the settings are validated on every save and applied as soon as they are saved'

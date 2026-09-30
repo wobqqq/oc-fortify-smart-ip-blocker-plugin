@@ -40,6 +40,7 @@ final class Plugin extends PluginBase
     {
         Validator::extend('smart_ip_blocker_current_ip', SmartIpBlockerCurrentIpRule::class);
     }
+
     private function runService(): void
     {
         /** @var SmartIpBlockerService $smartIpBlockerService */

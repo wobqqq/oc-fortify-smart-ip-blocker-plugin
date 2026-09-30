@@ -9,15 +9,17 @@ use Backend;
 use Backend\Widgets\Form;
 use October\Rain\Events\Dispatcher;
 use Request;
+use Symfony\Component\HttpFoundation\IpUtils;
 use System\Controllers\Settings;
 use Wobqqq\Fortify\Dto\WidgetGroupItemDto;
 use Wobqqq\Fortify\Enums\FortifyEvent;
 use Wobqqq\Fortify\Enums\View;
 use Wobqqq\Fortify\Enums\WidgetItemColor;
 use Wobqqq\Fortify\Models\Fortify;
-use Wobqqq\Fortify\Transformers\FortifyTransformer;
+use Wobqqq\Fortify\Transformers\FortifyTransformer as CoreTransformer;
 use Wobqqq\FortifySmartIpBlocker\Cache\SmartIpBlockerDtoCache;
 use Wobqqq\FortifySmartIpBlocker\Instances\SmartIpBlockerDtoInstance;
+use Wobqqq\FortifySmartIpBlocker\Transformers\FortifyTransformer;
 
 final readonly class FortifyListener
 {
@@ -28,38 +30,37 @@ final readonly class FortifyListener
 
     /**
      * @param Dispatcher $event
-     * @return void
      */
     public function subscribe($event): void
     {
-        $event->listen(FortifyEvent::SERVICES_WIDGET_GROUP_ITEM_SMART_IP_BLOCKER->value, function (WidgetGroupItemDto &$widgetGroupItemDto) {
+        $event->listen(FortifyEvent::SERVICES_WIDGET_GROUP_ITEM_SMART_IP_BLOCKER->value, function (WidgetGroupItemDto &$widgetGroupItemDto): void {
             $this->serveWidgetGroupItem($widgetGroupItemDto);
         });
 
-        $event->listen(FortifyEvent::MODEL_FORTIFY_INIT_SETTINGS_DATA->value, function (Fortify &$fortify) {
+        $event->listen(FortifyEvent::MODEL_FORTIFY_INIT_SETTINGS_DATA->value, function (Fortify &$fortify): void {
             $this->serveModelInitSettingsData($fortify);
         });
 
-        Fortify::extend(function (Fortify $fortify) {
+        Fortify::extend(function (Fortify $fortify): void {
             $this->serveModel($fortify);
-
-            $fortify->bindEvent('model.afterSave', function () {
-                $this->smartIpBlockerDtoCache->clear();
-            });
-
-            $fortify->bindEvent('model.afterDelete', function () {
-                $this->smartIpBlockerDtoCache->clear();
-            });
         });
 
-        $event->listen('backend.form.extendFields', function (Form $form) {
+        // Model events, not bindEvent(): the settings instance may predate this listener.
+        $event->listen(
+            ['eloquent.saved: ' . Fortify::class, 'eloquent.deleted: ' . Fortify::class],
+            function (): void {
+                $this->smartIpBlockerDtoCache->clear();
+            },
+        );
+
+        $event->listen('backend.form.extendFields', function (Form $form): void {
             if (!$form->getController() instanceof Settings || !$form->model instanceof Fortify || $form->isNested) {
                 return;
             }
 
-            /** @var Fortify $fortify */
             $fortify = $form->model;
 
+            $this->serveModel($fortify);
             $this->serveModelInitSettingsData($fortify);
             $this->serveFields($form);
             $this->presetCurrentIp($fortify);
@@ -68,7 +69,7 @@ final readonly class FortifyListener
 
     private function serveWidgetGroupItem(WidgetGroupItemDto &$widgetGroupItemDto): void
     {
-        $settingsLink = FortifyTransformer::widgetItemLinkDto(
+        $settingsLink = CoreTransformer::widgetItemLinkDto(
             'wobqqq.fortify::lang.buttons.edit',
             Backend::url('system/settings/update/wobqqq/fortify/fortify#primarytab-ip-firewall'),
             'icon-wrench',
@@ -77,7 +78,7 @@ final readonly class FortifyListener
         $color = $SmartIpBlockerDto->enabled === true
             ? WidgetItemColor::SUCCESS
             : WidgetItemColor::DANGER;
-        $widgetGroupItemDto = FortifyTransformer::widgetGroupItemDto(
+        $widgetGroupItemDto = CoreTransformer::widgetGroupItemDto(
             'wobqqq.fortify::lang.fields.smart_ip_blocker',
             [$settingsLink],
             $color,
@@ -89,28 +90,16 @@ final readonly class FortifyListener
     {
         $ipFirewall = (isset($fortify->ip_firewall) && is_array($fortify->ip_firewall)) ? $fortify->ip_firewall : [];
 
-        if (!isset($ipFirewall['smart_ip_blocker_enabled'])) {
-            $ipFirewall['smart_ip_blocker_enabled'] = false;
-        }
+        $ipFirewall['smart_ip_blocker_enabled'] ??= false;
 
-        if (!isset($ipFirewall['smart_ip_blocker_view'])) {
-            $ipFirewall['smart_ip_blocker_view'] = View::DENIED->value;
-        }
+        $ipFirewall['smart_ip_blocker_view'] ??= View::DENIED->value;
 
-        if (!isset($ipFirewall['smart_ip_blocker_requests_limit'])) {
-            $ipFirewall['smart_ip_blocker_requests_limit'] = 100;
-        }
+        $ipFirewall['smart_ip_blocker_requests_limit'] ??= FortifyTransformer::DEFAULT_REQUESTS_LIMIT;
 
-        if (!isset($ipFirewall['smart_ip_blocker_ban_hours'])) {
-            $ipFirewall['smart_ip_blocker_ban_hours'] = 1;
-        }
+        $ipFirewall['smart_ip_blocker_ban_hours'] ??= FortifyTransformer::DEFAULT_BAN_HOURS;
 
-        if (!isset($ipFirewall['smart_ip_blocker_cache_control'])) {
-            $ipFirewall['smart_ip_blocker_cache_control'] = false;
-        }
+        $ipFirewall['smart_ip_blocker_cache_control'] ??= false;
 
-        /** @noinspection PhpUndefinedFieldInspection */
-        /** @phpstan-ignore-next-line */
         $fortify->ip_firewall = $ipFirewall;
     }
 
@@ -174,7 +163,7 @@ final readonly class FortifyListener
                 'span' => 'auto',
                 'required' => true,
                 'type' => 'number',
-                'default' => 80,
+                'default' => FortifyTransformer::DEFAULT_REQUESTS_LIMIT,
                 'tab' => 'wobqqq.fortify::lang.tabs.ip_firewall',
                 'comment' => 'wobqqq.fortify::lang.comments.smart_ip_blocker_requests_limit',
                 'trigger' => [
@@ -190,7 +179,7 @@ final readonly class FortifyListener
                 'span' => 'auto',
                 'required' => true,
                 'type' => 'number',
-                'default' => 6,
+                'default' => FortifyTransformer::DEFAULT_BAN_HOURS,
                 'tab' => 'wobqqq.fortify::lang.tabs.ip_firewall',
                 'comment' => 'wobqqq.fortify::lang.comments.smart_ip_blocker_ban_hours',
                 'trigger' => [
@@ -283,16 +272,14 @@ final readonly class FortifyListener
         /** @var array<int, mixed> $ipTable */
         $ipTable = Arr::get($ipFirewall, 'smart_ip_blocker_excluded_ips', []);
 
-        $ips = array_column($ipTable, 'ip');
+        $ips = array_values(array_filter(array_column($ipTable, 'ip'), is_string(...)));
 
         $ip = Request::ip();
 
-        if (!in_array($ip, $ips)) {
+        if (is_string($ip) && ($ips === [] || !IpUtils::checkIp($ip, $ips))) {
             $ipTable[] = ['ip' => $ip];
 
             $ipFirewall['smart_ip_blocker_excluded_ips'] = $ipTable;
-            /** @noinspection PhpUndefinedFieldInspection */
-            /** @phpstan-ignore-next-line */
             $fortify->ip_firewall = $ipFirewall;
         }
     }

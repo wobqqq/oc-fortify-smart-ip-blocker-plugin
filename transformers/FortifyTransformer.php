@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Wobqqq\FortifySmartIpBlocker\Transformers;
 
-use Arr;
 use Illuminate\Support\Facades\View as IlluminateView;
 use Str;
 use Wobqqq\Fortify\Enums\View;
@@ -13,42 +12,32 @@ use Wobqqq\FortifySmartIpBlocker\Dto\SmartIpBlockerDto;
 
 final readonly class FortifyTransformer
 {
+    public const DEFAULT_REQUESTS_LIMIT = 100;
+
+    public const DEFAULT_BAN_HOURS = 1;
+
     public static function smartIpBlockerDto(): SmartIpBlockerDto
     {
-        /** @var bool|int|null $enabled */
-        $enabled = Fortify::get('ip_firewall.smart_ip_blocker_enabled');
-        $enabled = (bool)$enabled;
+        $enabled = (bool)Fortify::get('ip_firewall.smart_ip_blocker_enabled');
 
-        /** @var string|null $view */
         $view = Fortify::get('ip_firewall.smart_ip_blocker_view');
-        $view = (string)$view;
-        $view = empty($view) || !IlluminateView::exists($view) ? View::DENIED->value : $view;
+        $view = is_string($view) && $view !== '' && IlluminateView::exists($view) ? $view : View::DENIED->value;
 
-        /** @var bool|int|null $cacheControl */
-        $cacheControl = Fortify::get('ip_firewall.smart_ip_blocker_cache_control');
-        $cacheControl = (bool)$cacheControl;
+        $requestsLimit = self::positiveInt(Fortify::get('ip_firewall.smart_ip_blocker_requests_limit'), self::DEFAULT_REQUESTS_LIMIT);
+        $banHours = self::positiveInt(Fortify::get('ip_firewall.smart_ip_blocker_ban_hours'), self::DEFAULT_BAN_HOURS);
 
-        /** @var string|int|null $requestsLimit */
-        $requestsLimit = Fortify::get('ip_firewall.smart_ip_blocker_requests_limit');
-        $requestsLimit = (int)$requestsLimit;
-
-        /** @var string|int|null $banHours */
-        $banHours = Fortify::get('ip_firewall.smart_ip_blocker_ban_hours');
-        $banHours = (int)$banHours;
+        $excludedCidrRanges = [];
+        $excludedExactIps = [];
+        $excludedHeaders = [];
 
         if ($enabled) {
-            /** @var array<int, string>|null $excludedIps */
-            $excludedIps = Fortify::get('ip_firewall.smart_ip_blocker_excluded_ips');
-            $excludedIps = (empty($excludedIps) || !is_array($excludedIps)) ? [] : $excludedIps;
-            /** @var array<int, string> $excludedIps */
-            $excludedIps = array_column($excludedIps, 'ip');
-            $excludedIps = array_unique($excludedIps);
-            $excludedIps = array_filter($excludedIps);
+            foreach (self::rows('ip_firewall.smart_ip_blocker_excluded_ips') as $row) {
+                $ip = self::text($row['ip'] ?? null);
 
-            $excludedCidrRanges = [];
-            $excludedExactIps = [];
+                if ($ip === '') {
+                    continue;
+                }
 
-            foreach ($excludedIps as $ip) {
                 if (str_contains($ip, '/')) {
                     $excludedCidrRanges[] = $ip;
                 } else {
@@ -56,48 +45,46 @@ final readonly class FortifyTransformer
                 }
             }
 
-            /** @var array<int, array<string, string|null>>|null $excludedHeadersTable */
-            $excludedHeadersTable = Fortify::get('ip_firewall.smart_ip_blocker_excluded_headers');
-            $excludedHeadersTable = (empty($excludedHeadersTable) || !is_array($excludedHeadersTable))
-                ? []
-                : $excludedHeadersTable;
-            $excludedHeaders = [];
+            foreach (self::rows('ip_firewall.smart_ip_blocker_excluded_headers') as $row) {
+                $header = Str::lower(self::text($row['header'] ?? null));
+                $value = Str::lower(self::text($row['value'] ?? null));
 
-            foreach ($excludedHeadersTable as $excludedHeadersTableRow) {
-                /** @var string|null $header */
-                $header = Arr::get($excludedHeadersTableRow, 'header');
-                /** @var string|null $value */
-                $value = Arr::get($excludedHeadersTableRow, 'value');
-
-                if (empty($header) || empty($value)) {
-                    continue;
+                if ($header !== '' && $value !== '') {
+                    $excludedHeaders[$header][] = $value;
                 }
-
-                $header = trim((string)$header);
-                $header = Str::lower($header);
-                $value = trim((string)$value);
-                $value = Str::lower($value);
-
-                $excludedHeaders[$header] = $value;
             }
-
-            $excludedHeaders = array_unique($excludedHeaders);
-            $excludedHeaders = array_filter($excludedHeaders);
-        } else {
-            $excludedCidrRanges = [];
-            $excludedExactIps = [];
-            $excludedHeaders = [];
         }
 
         return new SmartIpBlockerDto(
             $enabled,
             $view,
-            $cacheControl,
-            empty($requestsLimit) ? 80 : $requestsLimit,
-            empty($banHours) ? 6 : $banHours,
-            $excludedCidrRanges,
+            (bool)Fortify::get('ip_firewall.smart_ip_blocker_cache_control'),
+            $requestsLimit,
+            $banHours,
+            array_values(array_unique($excludedCidrRanges)),
             $excludedExactIps,
-            $excludedHeaders,
+            array_map(static fn (array $values): array => array_values(array_unique($values)), $excludedHeaders),
         );
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private static function rows(string $setting): array
+    {
+        $rows = Fortify::get($setting);
+
+        /** @var array<int, array<string, mixed>> */
+        return array_values(array_filter(is_array($rows) ? $rows : [], is_array(...)));
+    }
+
+    private static function text(mixed $value): string
+    {
+        return is_scalar($value) ? trim((string)$value) : '';
+    }
+
+    private static function positiveInt(mixed $value, int $default): int
+    {
+        return is_numeric($value) && (int)$value > 0 ? (int)$value : $default;
     }
 }
