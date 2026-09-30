@@ -10,7 +10,11 @@
         "security",
         "rate-limit",
         "ip-blocker",
-        "fortify"
+        "fortify",
+        "laravel",
+        "rate-limiting",
+        "brute-force",
+        "ddos-protection"
     ],
     "authors": [
         {
@@ -18,10 +22,11 @@
             "homepage": "https://github.com/wobqqq"
         }
     ],
-    "homepage": "https://github.com/wobqqq/oc-fortify-smart-ip-blocker-plugin",
+    "homepage": "https://octobercms.com/plugin/wobqqq-fortifysmartipblocker",
     "support": {
         "issues": "https://github.com/wobqqq/oc-fortify-smart-ip-blocker-plugin/issues",
         "source": "https://github.com/wobqqq/oc-fortify-smart-ip-blocker-plugin",
+        "docs": "https://github.com/wobqqq/oc-fortify-smart-ip-blocker-plugin#readme",
         "security": "https://github.com/wobqqq/oc-fortify-smart-ip-blocker-plugin/security/policy"
     },
     "require": {
