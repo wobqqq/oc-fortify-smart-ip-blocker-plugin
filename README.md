@@ -1,5 +1,11 @@
 # Smart IP Blocker
 
+[![CI](https://github.com/wobqqq/oc-fortify-smart-ip-blocker-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/wobqqq/oc-fortify-smart-ip-blocker-plugin/actions/workflows/ci.yml)
+[![October CMS](https://img.shields.io/badge/October%20CMS-3.x%20%7C%204.x-e24848)](https://octobercms.com/plugin/wobqqq-fortifysmartipblocker)
+[![PHP](https://img.shields.io/badge/PHP-8.2%2B-777bb4)](composer.json)
+[![PHPStan](https://img.shields.io/badge/PHPStan-level%20max-brightgreen)](phpstan.neon.dist)
+[![License](https://img.shields.io/badge/License-Commercial-orange)](LICENSE.md)
+
 **Smart IP Blocker** automatically blocks IP addresses that exceed a defined request rate threshold.
 
 This extension enhances your protection against brute-force attacks and traffic abuse as part of the [Fortify](https://octobercms.com/plugin/wobqqq-fortify) suite.
@@ -32,7 +38,8 @@ This widget acts as a central hub, allowing you to monitor and manage your appli
 ## 📦 Requirements
 
 - PHP 8.2 or higher
-- October CMS 3.0 or higher
+- October CMS 3.x or 4.x
+- [Fortify](https://octobercms.com/plugin/wobqqq-fortify)
 
 ## 💻 Usage
 
@@ -53,3 +60,31 @@ php artisan wobqqq.fortify:smart-ip-blocker:remove-ip {ip}
 ```bash
 php artisan wobqqq.fortify:smart-ip-blocker:disable
 ```
+
+## ⬆️ Upgrading
+
+- **1.0.3** — the request limit is counted per minute, as the setting says; before, the count was kept for the whole ban duration, so a regular visitor could be banned after enough requests spread over hours. A banned visitor now gets `429 Too Many Requests` with a `Retry-After` header instead of `403`. An excluded header matches when its value is contained in the request's header (`Googlebot` matches the full Googlebot user agent), and several values may be listed for the same header. Bans issued by the previous version are lifted by the update.
+
+## ⚠️ Good to know
+
+- Behind a load balancer, proxy or CDN, configure October's trusted proxies so that the visitor's IP, not the proxy's, is counted.
+- Excluded headers are sent by the client and can be forged: use them for convenience (well-behaved bots), and the excluded IPs for anything you rely on.
+
+## 🔒 Security
+
+Please report a vulnerability privately, as described in [SECURITY.md](SECURITY.md).
+
+## 🛠️ Development
+
+The toolchain runs in Docker, the host needs nothing but `docker` and `make`. The module is tested together with the [Fortify core](https://github.com/wobqqq/oc-fortify-plugin), which Composer installs from its `main` branch.
+
+```bash
+make install        # composer install
+make code.fix       # composer normalize, Rector, PHP CS Fixer
+make code.check     # composer validate/audit, php -l, YAML lint, PHP CS Fixer, Rector, PHPStan (level max)
+make test.coverage  # Pest with coverage (90 % minimum)
+make ready          # everything above
+```
+
+Every pull request runs the same checks on GitHub Actions, plus a syntax check on PHP 8.2 and a run against the latest core. Pushing a tag that matches the last version in `updates/version.yaml` releases it to the October CMS marketplace once CI has passed.
+
