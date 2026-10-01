@@ -14,7 +14,7 @@ This extension enhances your protection against brute-force attacks and traffic 
 
 ## 📊 Security Dashboard Widget
 
-Fortify includes a built-in dashboard widget that gives you a real-time overview of your system’s security status.
+Fortify includes a dashboard widget that gives you an overview of your application’s security status.
 
 - Highlights critical vulnerabilities and misconfigurations
 - Provides quick access to all security checks and tools
@@ -26,7 +26,7 @@ This widget acts as a central hub, allowing you to monitor and manage your appli
 
 - Automatic IP blocking based on request rate
 - Configurable request thresholds
-- Protection against DDoS and brute-force attacks
+- Slows down brute-force attacks and request floods coming from one address
 - Works together with [IP Blocker](https://octobercms.com/plugin/wobqqq-fortifyipblocker) for manual protection
 
 ## 🔗 Related Plugins
@@ -51,7 +51,7 @@ This widget acts as a central hub, allowing you to monitor and manage your appli
 | **Artisan** | `php artisan plugin:install Wobqqq.FortifySmartIpBlocker` |
 | **Composer** | `composer require wobqqq/fortifysmartipblocker-plugin` then `php artisan october:migrate` |
 
-It needs the [Fortify](https://octobercms.com/plugin/wobqqq-fortify) core plugin: Composer installs it with the module, from the marketplace install **Fortify** first.
+It needs the [Fortify](https://octobercms.com/plugin/wobqqq-fortify) core plugin: Composer installs it with the module; when installing from the marketplace, install **Fortify** first.
 
 ## 💻 Usage
 
@@ -62,7 +62,7 @@ Navigate to `Settings -> Fortify` and enable **Smart IP Blocker**. Configure req
 
 **Console Commands:**
 
-- Remove an IP from the block list:
+- Lift the ban on an IP and reset its request count:
 ```bash
 php artisan wobqqq.fortify:smart-ip-blocker:remove-ip {ip}
 ```
@@ -75,6 +75,7 @@ php artisan wobqqq.fortify:smart-ip-blocker:disable
 
 ## ⬆️ Upgrading
 
+- **1.0.4** — installing the module with Composer installs the Fortify core with it. Nothing changes on an existing site.
 - **1.0.3** — the request limit is counted per minute, as the setting says; before, the count was kept for the whole ban duration, so a regular visitor could be banned after enough requests spread over hours. A banned visitor now gets `429 Too Many Requests` with a `Retry-After` header instead of `403`. An excluded header matches when its value is contained in the request's header (`Googlebot` matches the full Googlebot user agent), and several values may be listed for the same header. Bans issued by the previous version are lifted by the update.
 
 ## ⚠️ Good to know
@@ -98,5 +99,5 @@ make test.coverage  # Pest with coverage (90 % minimum)
 make ready          # everything above
 ```
 
-Every pull request runs the same checks on GitHub Actions, plus a syntax check on PHP 8.2 and a run against the latest core. Pushing a tag that matches the last version in `updates/version.yaml` releases it to the October CMS marketplace once CI has passed.
+Every pull request runs the same checks on GitHub Actions, plus a syntax check on PHP 8.2 and a run against the latest core. Pushing a tag that matches the last version in `updates/version.yaml` publishes it as a GitHub release and to the October CMS marketplace once CI has passed.
 
