@@ -75,6 +75,7 @@ php artisan wobqqq.fortify:smart-ip-blocker:disable
 
 ## ⬆️ Upgrading
 
+- **1.0.5** — internal refactoring. Nothing changes on an existing site.
 - **1.0.4** — installing the module with Composer installs the Fortify core with it. Nothing changes on an existing site.
 - **1.0.3** — the request limit is counted per minute, as the setting says; before, the count was kept for the whole ban duration, so a regular visitor could be banned after enough requests spread over hours. A banned visitor now gets `429 Too Many Requests` with a `Retry-After` header instead of `403`. An excluded header matches when its value is contained in the request's header (`Googlebot` matches the full Googlebot user agent), and several values may be listed for the same header. Bans issued by the previous version are lifted by the update.
 
